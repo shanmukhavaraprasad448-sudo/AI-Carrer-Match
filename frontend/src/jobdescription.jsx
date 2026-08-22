@@ -29,12 +29,12 @@ function JobDescription({ setPage, resumeFile }) {
 
       // Send request to Flask backend
       const response = await fetch(
-        "http://127.0.0.1:5000/api/analyze",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+  "https://ai-careermatch-backend.onrender.com/api/analyze",
+  {
+    method: "POST",
+    body: formData,
+  }
+);
 
       // Get backend response
       const data = await response.json();
