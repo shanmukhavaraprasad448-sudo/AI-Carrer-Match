@@ -1,13 +1,12 @@
+import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from resume_parser import extract_text_from_pdf
 import re
 
-# =========================================
-# CREATE FLASK APP
-# =========================================
 
 app = Flask(__name__)
+
 CORS(app)
 
 
@@ -17,7 +16,9 @@ CORS(app)
 
 @app.route("/")
 def home():
-    return "Backend is working!"
+    return jsonify({
+        "message": "AI CareerMatch Backend is running!"
+    })
 
 
 # =========================================
@@ -28,30 +29,44 @@ def home():
 def upload_resume():
 
     if "resume" not in request.files:
+
         return jsonify({
             "error": "No resume uploaded"
         }), 400
 
+
     file = request.files["resume"]
 
+
     if file.filename == "":
+
         return jsonify({
             "error": "No file selected"
         }), 400
+
 
     try:
 
         resume_text = extract_text_from_pdf(file)
 
         return jsonify({
-            "message": "Resume uploaded successfully",
-            "resume_text": resume_text
+
+            "message":
+                "Resume uploaded successfully",
+
+            "resume_text":
+                resume_text
+
         })
+
 
     except Exception as e:
 
         return jsonify({
-            "error": str(e)
+
+            "error":
+                str(e)
+
         }), 500
 
 
@@ -64,43 +79,62 @@ def skill_exists(text, skill):
     text = text.lower()
     skill = skill.lower()
 
-    # Special handling for C++
-    if skill == "c++":
-        return "c++" in text or "cpp" in text
 
-    # Special handling for React
-    if skill == "react":
+    if skill == "c++":
+
         return (
+            "c++" in text
+            or "cpp" in text
+        )
+
+
+    if skill == "react":
+
+        return (
+
             "react" in text
             or "react.js" in text
             or "reactjs" in text
+
         )
 
-    # Special handling for Node
+
     if skill == "node":
+
         return (
+
             "node" in text
             or "node.js" in text
             or "nodejs" in text
+
         )
 
-    # Special handling for Express
+
     if skill == "express":
+
         return (
+
             "express" in text
             or "express.js" in text
+
         )
 
+
     pattern = (
+
         r"(?<![a-zA-Z0-9])"
         + re.escape(skill)
         + r"(?![a-zA-Z0-9])"
+
     )
 
+
     return re.search(
+
         pattern,
         text,
         re.IGNORECASE
+
     ) is not None
 
 
@@ -111,58 +145,67 @@ def skill_exists(text, skill):
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
 
-    # -----------------------------------------
-    # CHECK RESUME
-    # -----------------------------------------
+    # Check resume
 
     if "resume" not in request.files:
 
         return jsonify({
-            "error": "Resume is required"
+
+            "error":
+                "Resume is required"
+
         }), 400
+
 
     resume_file = request.files["resume"]
 
 
-    # -----------------------------------------
-    # GET JOB DESCRIPTION
-    # -----------------------------------------
+    # Get job description
 
     job_description = request.form.get(
+
         "job_description",
         ""
+
     )
+
 
     if not job_description.strip():
 
         return jsonify({
-            "error": "Job description is required"
+
+            "error":
+                "Job description is required"
+
         }), 400
 
 
     try:
 
-        # =====================================
-        # EXTRACT RESUME TEXT
-        # =====================================
+        # Extract resume text
 
         resume_text = extract_text_from_pdf(
             resume_file
         )
 
+
         if not resume_text or not resume_text.strip():
 
             return jsonify({
-                "error": "Could not extract text from resume"
+
+                "error":
+                    "Could not extract text from resume"
+
             }), 400
 
 
         resume_lower = resume_text.lower()
+
         job_lower = job_description.lower()
 
 
         # =====================================
-        # SKILLS
+        # SKILLS DATABASE
         # =====================================
 
         skills = [
@@ -217,42 +260,39 @@ def analyze():
 
 
         # =====================================
-        # FIND REQUIRED SKILLS
+        # REQUIRED SKILLS
         # =====================================
 
         required_skills = []
 
+
         for skill in skills:
 
-            if skill_exists(
-                job_lower,
-                skill
-            ):
+            if skill_exists(job_lower, skill):
 
                 required_skills.append(skill)
 
 
         # =====================================
-        # FIND MATCHING SKILLS
+        # MATCHING SKILLS
         # =====================================
 
         matching_skills = []
 
+
         for skill in required_skills:
 
-            if skill_exists(
-                resume_lower,
-                skill
-            ):
+            if skill_exists(resume_lower, skill):
 
                 matching_skills.append(skill)
 
 
         # =====================================
-        # FIND MISSING SKILLS
+        # MISSING SKILLS
         # =====================================
 
         missing_skills = []
+
 
         for skill in required_skills:
 
@@ -262,18 +302,20 @@ def analyze():
 
 
         # =====================================
-        # CALCULATE SCORE
+        # MATCH SCORE
         # =====================================
 
         if len(required_skills) > 0:
 
             score = round(
+
                 (
                     len(matching_skills)
                     /
                     len(required_skills)
                 )
                 * 100
+
             )
 
         else:
@@ -282,12 +324,13 @@ def analyze():
 
 
         # =====================================
-        # QUALIFICATION
+        # QUALIFICATION CHECK
         # =====================================
 
         qualification_match = (
             "No specific qualification detected."
         )
+
 
         education_keywords = [
 
@@ -304,6 +347,7 @@ def analyze():
 
         ]
 
+
         for keyword in education_keywords:
 
             if skill_exists(
@@ -312,9 +356,10 @@ def analyze():
             ):
 
                 qualification_match = (
-                    "The resume contains a "
-                    "relevant technical or "
-                    "engineering qualification."
+
+                    "The resume contains a relevant "
+                    "technical or engineering qualification."
+
                 )
 
                 break
@@ -327,49 +372,65 @@ def analyze():
         if score >= 80:
 
             explanation = (
-                "Excellent match! Your resume "
-                "contains most of the important "
-                "skills required for this job."
+
+                "Excellent match! Your resume contains "
+                "most of the important skills required "
+                "for this job."
+
             )
+
 
         elif score >= 60:
 
             explanation = (
-                "Good match. Your resume contains "
-                "many of the required skills, but "
-                "a few areas can still be improved."
+
+                "Good match. Your resume contains many "
+                "of the required skills, but a few areas "
+                "can still be improved."
+
             )
+
 
         elif score >= 40:
 
             explanation = (
-                "Moderate match. Some required "
-                "skills are present, but several "
-                "important skills are missing."
+
+                "Moderate match. Some required skills "
+                "are present, but several important "
+                "skills are missing."
+
             )
+
 
         elif score > 0:
 
             explanation = (
-                "Low match. Your resume contains "
-                "some relevant skills, but more "
-                "skills are required for this job."
+
+                "Low match. Your resume contains some "
+                "relevant skills, but more skills are "
+                "required for this job."
+
             )
+
 
         else:
 
             if len(required_skills) == 0:
 
                 explanation = (
-                    "No recognized technical skills "
-                    "were found in the job description."
+
+                    "No recognized technical skills were "
+                    "found in the job description."
+
                 )
 
             else:
 
                 explanation = (
-                    "None of the recognized required "
-                    "skills were found in the resume."
+
+                    "None of the recognized required skills "
+                    "were found in the resume."
+
                 )
 
 
@@ -379,47 +440,59 @@ def analyze():
 
         suggestions = []
 
+
         for skill in missing_skills[:5]:
 
             suggestions.append(
+
                 "Learn and practice " + skill
+
             )
 
 
         if score < 50:
 
             suggestions.append(
+
                 "Add relevant projects to your resume."
+
             )
 
 
         if score < 70:
 
             suggestions.append(
-                "Highlight your technical skills "
-                "more clearly in your resume."
+
+                "Highlight your technical skills more "
+                "clearly in your resume."
+
             )
 
 
         if len(suggestions) == 0:
 
             suggestions.append(
+
                 "Continue improving your existing "
                 "technical skills and project experience."
+
             )
 
 
         # =====================================
-        # FINAL RESULT
+        # RESULT
         # =====================================
 
         result = {
 
-            "match_score": score,
+            "match_score":
+                score,
 
-            "matching_skills": matching_skills,
+            "matching_skills":
+                matching_skills,
 
-            "missing_skills": missing_skills,
+            "missing_skills":
+                missing_skills,
 
             "qualification_match":
                 qualification_match,
@@ -433,54 +506,35 @@ def analyze():
         }
 
 
-        # =====================================
-        # TERMINAL OUTPUT
-        # =====================================
+        # Terminal log
 
-        print("\n=================================")
-        print("        RESUME ANALYSIS")
-        print("=================================")
+        print("\n==============================")
 
-        print(
-            "Resume characters:",
-            len(resume_text)
-        )
+        print("RESUME ANALYSIS")
 
-        print(
-            "Required Skills:",
-            required_skills
-        )
+        print("==============================")
 
-        print(
-            "Matching Skills:",
-            matching_skills
-        )
+        print("Required Skills:", required_skills)
 
-        print(
-            "Missing Skills:",
-            missing_skills
-        )
+        print("Matching Skills:", matching_skills)
 
-        print(
-            "Match Score:",
-            score
-        )
+        print("Missing Skills:", missing_skills)
 
-        print("=================================\n")
+        print("Match Score:", score)
+
+        print("==============================\n")
 
 
         # =====================================
-        # SEND RESULT TO FRONTEND
+        # SEND RESPONSE
         # =====================================
 
         return jsonify({
 
             "success": True,
 
-            # Direct values
-            # for Result.jsx
-
-            "match_score": score,
+            "match_score":
+                score,
 
             "matching_skills":
                 matching_skills,
@@ -497,10 +551,8 @@ def analyze():
             "suggestions":
                 suggestions,
 
-            # Also keep complete result
-            # for compatibility
-
-            "result": result
+            "result":
+                result
 
         })
 
@@ -512,11 +564,13 @@ def analyze():
             str(e)
         )
 
+
         return jsonify({
 
             "success": False,
 
-            "error": str(e)
+            "error":
+                str(e)
 
         }), 500
 
@@ -527,8 +581,17 @@ def analyze():
 
 if __name__ == "__main__":
 
+    port = int(
+        os.environ.get("PORT", 5000)
+    )
+
+
     app.run(
-        host="127.0.0.1",
-        port=5000,
-        debug=True
+
+        host="0.0.0.0",
+
+        port=port,
+
+        debug=False
+
     )
