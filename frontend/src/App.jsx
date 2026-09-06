@@ -1,6 +1,6 @@
 import { useState } from "react";
 import ResumeUpload from "./ResumeUpload";
-import JobDescription from "./JobDescription";
+import JobDescription from "./jobdescription";
 import Result from "./Result";
 import "./App.css";
 
